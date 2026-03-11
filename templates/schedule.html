@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Расписание{% endblock %}
+
+{% block content %}
+<h1 class="page-title">ВСЕ ФИЛЬМЫ В ПРОКАТЕ</h1>
+
+<div class="movies-grid" id="moviesGrid">
+    <div style="color: white; text-align: center; grid-column: 1/-1;">Загрузка фильмов...</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        console.log('Загружаем все фильмы...');
+        const response = await fetch('/api/movies');
+        console.log('Статус ответа:', response.status);
+
+        const movies = await response.json();
+        console.log('Получены фильмы:', movies);
+
+        const grid = document.getElementById('moviesGrid');
+
+        if (!movies || movies.length === 0) {
+            grid.innerHTML = '<div style="color: white; text-align: center; grid-column: 1/-1;">Нет доступных фильмов</div>';
+            return;
+        }
+
+        grid.innerHTML = '';
+
+        movies.forEach(movie => {
+            const card = document.createElement('div');
+            card.className = 'movie-card';
+            card.innerHTML = `
+                <div class="movie-poster"></div>
+                <div class="movie-info">
+                    <div class="movie-title">${movie.title || 'Без названия'}</div>
+                    <div class="movie-detail"><span>Жанр</span> ${movie.genre || 'Не указан'}</div>
+                    <div class="movie-detail"><span>Время</span> ${movie.duration || '0 мин.'}</div>
+                    <div class="age-badge">${movie.age_rating || '0+'}</div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки фильмов:', error);
+        document.getElementById('moviesGrid').innerHTML =
+            '<div style="color: white; text-align: center; grid-column: 1/-1;">Ошибка загрузки фильмов</div>';
+    }
+});
+</script>
+{% endblock %}

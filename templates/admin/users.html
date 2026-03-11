@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">Пользователи</h1>
+    <a href="/admin" style="color: white; text-decoration: none;">← Главная</a>
+</div>
+
+<button onclick="showAddForm()" class="btn btn-add">+ Добавить пользователя</button>
+
+<div id="addForm" style="display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+    <h3 style="color: white; margin-bottom: 20px;">Новый пользователь</h3>
+    <div class="form-group">
+        <label>Логин</label>
+        <input type="text" id="userUsername" required>
+    </div>
+    <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" id="userPassword" required>
+    </div>
+    <div class="form-group">
+        <label>Роль</label>
+        <select id="userRole" required>
+            <option value="admin">Администратор</option>
+            <option value="cashier">Кассир</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>ФИО</label>
+        <input type="text" id="userFullName">
+    </div>
+    <button onclick="addUser()" class="btn btn-add">Сохранить</button>
+    <button onclick="hideAddForm()" class="btn" style="background: #666;">Отмена</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Логин</th>
+            <th>Пароль</th>
+            <th>Роль</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody id="usersTableBody">
+        <!-- Данные загружаются через API -->
+    </tbody>
+</table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', loadUsers);
+    
+    async function loadUsers() {
+        try {
+            const users = await apiCall('/api/users');
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${user.username}</td>
+                    <td>••••••••</td>
+                    <td>${user.role === 'admin' ? 'Администратор' : 'Кассир'}</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editUser(${user.id})">Редактировать</button>
+                        ${user.id !== currentUser?.id ? `<button class="btn btn-delete" onclick="deleteUser(${user.id})">Удалить</button>` : ''}
+                    </td>
+                `;
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error);
+        }
+    }
+    
+    function showAddForm() {
+        document.getElementById('addForm').style.display = 'block';
+    }
+    
+    function hideAddForm() {
+        document.getElementById('addForm').style.display = 'none';
+    }
+    
+    async function addUser() {
+        const user = {
+            username: document.getElementById('userUsername').value,
+            password: document.getElementById('userPassword').value,
+            role: document.getElementById('userRole').value,
+            full_name: document.getElementById('userFullName').value
+        };
+        
+        if (!user.username || !user.password) {
+            alert('Заполните логин и пароль');
+            return;
+        }
+        
+        try {
+            await apiCall('/api/users/add', 'POST', user);
+            hideAddForm();
+            loadUsers();
+            
+            // Очистка формы
+            document.getElementById('userUsername').value = '';
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userFullName').value = '';
+        } catch (error) {
+            alert('Ошибка при добавлении пользователя');
+        }
+    }
+    
+    async function deleteUser(id) {
+        if (confirm('Удалить пользователя?')) {
+            try {
+                await apiCall(`/api/users/delete/${id}`, 'POST');
+                loadUsers();
+            } catch (error) {
+                alert('Ошибка при удалении пользователя');
+            }
+        }
+    }
+    
+    function editUser(id) {
+        alert('Редактирование будет реализовано позже');
+    }
+</script>
+{% endblock %}

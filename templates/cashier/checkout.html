@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Оформление продажи{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">Оформление продажи</h1>
+    <a href="javascript:history.back()" style="color: white; text-decoration: none;">← Назад к схеме</a>
+</div>
+
+<div id="checkoutData" style="background: white; padding: 30px; border-radius: 16px;">
+    Загрузка данных...
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const seatId = urlParams.get('seat_id');
+    
+    let sessionData = null;
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadSessionData();
+        await loadCheckoutForm();
+    });
+    
+    async function loadSessionData() {
+        try {
+            sessionData = await apiCall(`/api/session/${sessionId}`);
+        } catch (error) {
+            console.error('Ошибка загрузки сеанса:', error);
+        }
+    }
+    
+    async function loadCheckoutForm() {
+        if (!sessionData) return;
+        
+        const div = document.getElementById('checkoutData');
+        div.innerHTML = `
+            <h3 style="margin-bottom: 20px;">Ряд: ${getRowFromSeatId()} Место: ${getSeatFromSeatId()}</h3>
+            
+            <table style="margin-bottom: 30px;">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Фильм</th>
+                        <th>Время начала</th>
+                        <th>Время окончания</th>
+                        <th>Номер зала</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${sessionData.date}</td>
+                        <td>${sessionData.movie}</td>
+                        <td>${sessionData.start_time}</td>
+                        <td>${sessionData.end_time}</td>
+                        <td>${sessionData.hall}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="margin-bottom: 30px;">
+                <h3>Сумма: ${sessionData.price} ₽</h3>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <h3>Способ оплаты:</h3>
+                <div style="display: flex; gap: 20px;">
+                    <label>
+                        <input type="radio" name="paymentMethod" value="Наличные"> Наличные
+                    </label>
+                    <label>
+                        <input type="radio" name="paymentMethod" value="Карта" checked> Карта
+                    </label>
+                    <label>
+                        <input type="radio" name="paymentMethod" value="QR-код"> QR-код
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>ФИО зрителя:</label>
+                <input type="text" id="customerName" required style="width: 100%; padding: 10px;">
+            </div>
+            
+            <button onclick="processSale()" class="btn btn-add">Сформировать PDF-билет</button>
+        `;
+    }
+    
+    function getRowFromSeatId() {
+        // В реальном приложении нужно получить ряд из БД
+        // Для демо возвращаем примерные значения
+        return Math.floor(Math.random() * 10) + 1;
+    }
+    
+    function getSeatFromSeatId() {
+        // В реальном приложении нужно получить место из БД
+        return Math.floor(Math.random() * 20) + 1;
+    }
+    
+    async function processSale() {
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+        const customerName = document.getElementById('customerName')?.value;
+        
+        if (!customerName) {
+            alert('Введите ФИО зрителя');
+            return;
+        }
+        
+        const ticket = {
+            session_id: parseInt(sessionId),
+            seat_id: parseInt(seatId),
+            customer_name: customerName,
+            price: sessionData.price,
+            payment_method: paymentMethod
+        };
+        
+        try {
+            const result = await apiCall('/api/tickets/buy', 'POST', ticket);
+            if (result.success) {
+                alert('Билет успешно продан!');
+                window.location.href = '/cashier/sales';
+            } else {
+                alert('Ошибка при продаже билета');
+            }
+        } catch (error) {
+            alert('Ошибка при продаже билета');
+        }
+    }
+</script>
+{% endblock %}

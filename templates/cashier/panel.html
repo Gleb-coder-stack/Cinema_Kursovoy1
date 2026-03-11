@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Панель кассира{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Панель кассира</h1>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+    <a href="/cashier/sales" style="text-decoration: none;">
+        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; text-align: center; border: 2px solid white; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <h3 style="color: white; font-size: 1.5rem;">🎫 Продажа билетов</h3>
+        </div>
+    </a>
+
+    <a href="/cashier/returns" style="text-decoration: none;">
+        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; text-align: center; border: 2px solid white; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <h3 style="color: white; font-size: 1.5rem;">↩️ Возврат билетов</h3>
+        </div>
+    </a>
+</div>
+{% endblock %}

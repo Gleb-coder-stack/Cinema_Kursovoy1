@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Управление ценами{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">Цены</h1>
+    <a href="/admin" style="color: white; text-decoration: none;">← Главная</a>
+</div>
+
+<button onclick="showAddForm()" class="btn btn-add">+ Добавить тариф</button>
+
+<div id="addForm" style="display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+    <h3 style="color: white; margin-bottom: 20px;">Новый тариф</h3>
+    <div class="form-group">
+        <label>Тариф</label>
+        <input type="text" id="tariffName" placeholder="Стандарт" required>
+    </div>
+    <div class="form-group">
+        <label>Цена (₽)</label>
+        <input type="number" id="tariffPrice" required>
+    </div>
+    <button onclick="addTariff()" class="btn btn-add">Сохранить</button>
+    <button onclick="hideAddForm()" class="btn" style="background: #666;">Отмена</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Тариф</th>
+            <th>Цена</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody id="tariffsTableBody">
+        <!-- Данные загружаются через API -->
+    </tbody>
+</table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', loadTariffs);
+    
+    async function loadTariffs() {
+        try {
+            const tariffs = await apiCall('/api/tariffs');
+            const tbody = document.getElementById('tariffsTableBody');
+            tbody.innerHTML = '';
+            
+            tariffs.forEach(tariff => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${tariff.name}</td>
+                    <td>${tariff.price} ₽</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editTariff(${tariff.id})">Редактировать</button>
+                        <button class="btn btn-delete" onclick="deleteTariff(${tariff.id})">Удалить</button>
+                    </td>
+                `;
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки тарифов:', error);
+        }
+    }
+    
+    function showAddForm() {
+        document.getElementById('addForm').style.display = 'block';
+    }
+    
+    function hideAddForm() {
+        document.getElementById('addForm').style.display = 'none';
+    }
+    
+    async function addTariff() {
+        const tariff = {
+            name: document.getElementById('tariffName').value,
+            price: parseInt(document.getElementById('tariffPrice').value)
+        };
+        
+        if (!tariff.name || !tariff.price) {
+            alert('Заполните все поля');
+            return;
+        }
+        
+        try {
+            await apiCall('/api/tariffs/add', 'POST', tariff);
+            hideAddForm();
+            loadTariffs();
+            
+            // Очистка формы
+            document.getElementById('tariffName').value = '';
+            document.getElementById('tariffPrice').value = '';
+        } catch (error) {
+            alert('Ошибка при добавлении тарифа');
+        }
+    }
+    
+    async function deleteTariff(id) {
+        if (confirm('Удалить тариф?')) {
+            try {
+                await apiCall(`/api/tariffs/delete/${id}`, 'POST');
+                loadTariffs();
+            } catch (error) {
+                alert('Ошибка при удалении тарифа');
+            }
+        }
+    }
+    
+    function editTariff(id) {
+        alert('Редактирование будет реализовано позже');
+    }
+</script>
+{% endblock %}

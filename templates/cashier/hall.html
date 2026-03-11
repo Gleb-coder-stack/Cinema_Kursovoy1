@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Схема зала{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">Схема зала</h1>
+    <a href="/cashier/sales" style="color: white; text-decoration: none;">← К сеансам</a>
+</div>
+
+<div id="sessionInfo" style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px; color: white;">
+    Загрузка информации о сеансе...
+</div>
+
+<div class="hall-scheme" id="hallScheme">
+    <div class="screen">ЭКРАН</div>
+    <div class="seats-grid" id="seatsGrid">
+        <!-- Места загружаются через API -->
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e0e0e0;"></div>
+            <span>Стандарт</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffd700;"></div>
+            <span>VIP</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ff6b6b;"></div>
+            <span>Премиум</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #666;"></div>
+            <span>Занято</span>
+        </div>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <span>1-3 ряды - Премиум</span>
+        </div>
+        <div class="legend-item">
+            <span>4-6 ряды - VIP</span>
+        </div>
+        <div class="legend-item">
+            <span>7-10 ряды - Стандарт</span>
+        </div>
+    </div>
+</div>
+
+<div id="selectedSeatInfo" style="background: white; padding: 20px; border-radius: 16px; margin-top: 20px; display: none;">
+    <h3>Выбранное место:</h3>
+    <p id="selectedSeatText"></p>
+    <button onclick="goToCheckout()" class="btn btn-add">Продолжить оформление</button>
+</div>
+
+<script>
+    const sessionId = window.location.pathname.split('/').pop();
+    let sessionData = null;
+    let soldSeats = [];
+    let selectedSeat = null;
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadSessionData();
+        await loadSoldTickets();
+        await loadSeats();
+    });
+    
+    async function loadSessionData() {
+        try {
+            sessionData = await apiCall(`/api/session/${sessionId}`);
+            document.getElementById('sessionInfo').innerHTML = `
+                <h3>Выбранный сеанс:</h3>
+                <p>📅 ${sessionData.date} | ${sessionData.movie} | ${sessionData.start_time} - ${sessionData.end_time} | Зал ${sessionData.hall}</p>
+                <p>💰 Цена: ${sessionData.price} ₽ (${sessionData.tariff_name})</p>
+            `;
+        } catch (error) {
+            console.error('Ошибка загрузки сеанса:', error);
+        }
+    }
+    
+    async function loadSoldTickets() {
+        try {
+            const tickets = await apiCall(`/api/tickets/${sessionId}`);
+            soldSeats = tickets.map(t => t.seat_id);
+        } catch (error) {
+            console.error('Ошибка загрузки проданных билетов:', error);
+        }
+    }
+    
+    async function loadSeats() {
+        if (!sessionData) return;
+        
+        try {
+            const seats = await apiCall(`/api/seats/${sessionData.hall_id}`);
+            const grid = document.getElementById('seatsGrid');
+            grid.innerHTML = '';
+            
+            let currentRow = 0;
+            let rowDiv = null;
+            
+            seats.forEach(seat => {
+                if (seat.row !== currentRow) {
+                    if (rowDiv) grid.appendChild(rowDiv);
+                    currentRow = seat.row;
+                    rowDiv = document.createElement('div');
+                    rowDiv.className = 'seat-row';
+                }
+                
+                const isSold = soldSeats.includes(seat.id);
+                const seatClass = getSeatClass(seat.type, isSold);
+                
+                const seatDiv = document.createElement('div');
+                seatDiv.className = `seat ${seatClass}`;
+                seatDiv.dataset.seatId = seat.id;
+                seatDiv.dataset.row = seat.row;
+                seatDiv.dataset.seat = seat.seat;
+                seatDiv.dataset.type = seat.type;
+                if (isSold) seatDiv.dataset.sold = 'true';
+                seatDiv.textContent = seat.seat;
+                seatDiv.onclick = () => selectSeat(seatDiv);
+                
+                rowDiv.appendChild(seatDiv);
+            });
+            
+            if (rowDiv) grid.appendChild(rowDiv);
+        } catch (error) {
+            console.error('Ошибка загрузки мест:', error);
+        }
+    }
+    
+    function getSeatClass(type, isSold) {
+        if (isSold) return 'sold';
+        switch(type) {
+            case 'Стандарт': return 'standard';
+            case 'VIP': return 'vip';
+            case 'Премиум': return 'premium';
+            default: return 'standard';
+        }
+    }
+    
+    function selectSeat(element) {
+        if (element.dataset.sold === 'true') {
+            alert('Это место уже занято');
+            return;
+        }
+        
+        // Снимаем выделение с предыдущего места
+        if (selectedSeat) {
+            selectedSeat.classList.remove('selected');
+        }
+        
+        // Выделяем новое место
+        element.classList.add('selected');
+        selectedSeat = element;
+        
+        // Показываем информацию
+        document.getElementById('selectedSeatText').textContent = 
+            `Ряд: ${element.dataset.row} Место: ${element.dataset.seat} (${element.dataset.type})`;
+        document.getElementById('selectedSeatInfo').style.display = 'block';
+    }
+    
+    function goToCheckout() {
+        if (!selectedSeat) return;
+        window.location.href = `/cashier/checkout?session_id=${sessionId}&seat_id=${selectedSeat.dataset.seatId}`;
+    }
+</script>
+{% endblock %}
